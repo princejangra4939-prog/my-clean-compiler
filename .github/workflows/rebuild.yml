@@ -1,0 +1,24 @@
+name: Final Amazon APK Rebuilder
+on: push
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Android Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apktool apksigner
+      - name: Unzip Source Project
+        run: unzip clean-project.zip -d decompiled_apk
+      - name: Compile Back to APK
+        run: apktool b decompiled_apk -o unsigned_clean.apk
+      - name: Generate Security Key
+        run: keytool -genkey -v -keystore amazon-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias securealias -storepass mysecretpass123 -keypass mysecretpass123 -dname "CN=Developer, O=AppStore, C=US"
+      - name: Sign APK for Amazon Store
+        run: apksigner sign --ks amazon-release-key.jks --ks-pass pass:mysecretpass123 --key-pass pass:mysecretpass123 --out amazon-ready.apk unsigned_clean.apk
+      - name: Upload Clean Finished APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanAmazonApp
+          path: amazon-ready.apk
